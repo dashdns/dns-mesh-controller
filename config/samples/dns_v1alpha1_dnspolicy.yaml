@@ -1,0 +1,24 @@
+apiVersion: dns.dnspolicies.io/v1alpha1
+kind: DnsPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: dns-mesh-controller
+    app.kubernetes.io/managed-by: kustomize
+  name: dnspolicy-sample
+spec:
+  # TargetSelector defines which pods this policy applies to
+  # The controller will compute a hash of these labels for efficient lookups
+  targetSelector:
+    app: frontend
+    env: production
+
+  # AllowList defines domain patterns that are allowed
+  allowList:
+    - "*.example.com"
+    - "api.trusted-service.io"
+    - "*.googleapis.com"
+
+  # BlockList defines domain patterns that are blocked
+  blockList:
+    - "*.malicious-site.com"
+    - "tracking.ads.net"
