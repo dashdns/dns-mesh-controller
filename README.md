@@ -1,135 +1,269 @@
-# dns-mesh-controller
-// TODO(user): Add simple overview of use/purpose
+# DNS Mesh Controller
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+## Overview
 
-## Getting Started
+DNS Mesh Controller is a Kubernetes operator that provides fine-grained DNS policy management for your workloads through automatic sidecar injection. It enables you to control which DNS queries are allowed or blocked at the pod level using Custom Resource Definitions (CRDs).
+
+## What It Does
+
+The DNS Mesh Controller automatically injects a sidecar DNS container into your pods using a mutating webhook. This sidecar acts as a local DNS proxy that enforces DNS policies defined through Kubernetes CRDs, allowing you to:
+
+- **Control DNS Resolution**: Define allow and block lists for DNS queries
+- **Selective Policy Application**: Target specific pods using label selectors
+- **Zero-Touch Integration**: Automatic sidecar injection without modifying pod specifications
+- **Dynamic Policy Updates**: Update DNS policies without restarting pods
+
+## Architecture
+
+The controller consists of three main components:
+
+1. **Mutating Webhook**: Automatically injects the DNS sidecar container into targeted pods
+2. **Controller Manager**: Watches DnsPolicy CRDs and reconciles the desired state
+3. **DNS Sidecar**: Proxy injected into pods that enforces DNS policies
+
+## Installation
 
 ### Prerequisites
-- go version v1.24.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+- Kubernetes cluster v1.11.3 or higher
+- kubectl configured to access your cluster
+- Helm 3.x installed
 
-```sh
-make docker-build docker-push IMG=<some-registry>/dns-mesh-controller:tag
+### Deploy with Helm
+
+Navigate to the `deploy` directory and install the Helm chart:
+
+```bash
+cd deploy/dns-mesh-controller
+helm upgrade -i dns-mesh-controller -f values.yaml -n dns-mesh-controller-system --create-namespace .
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+This command will:
+- Create the `dns-mesh-controller-system` namespace if it doesn't exist
+- Deploy the controller manager
+- Set up the mutating webhook
+- Install the DnsPolicy CRD
+- Configure necessary RBAC permissions
 
-**Install the CRDs into the cluster:**
+### Verify Installation
 
-```sh
-make install
+Check that the controller is running:
+
+```bash
+kubectl get pods -n dns-mesh-controller-system
+kubectl get crd dnspolicies.dns.dnspolicies.io
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+## Usage
 
-```sh
-make deploy IMG=<some-registry>/dns-mesh-controller:tag
+### Creating a DNS Policy
+
+DNS policies are defined using the `DnsPolicy` custom resource. Here's an example:
+
+```yaml
+apiVersion: dns.dnspolicies.io/v1alpha1
+kind: DnsPolicy
+metadata:
+  name: dnspolicy-sample
+  namespace: default
+spec:
+  # Pods to apply this policy to
+  targetSelector:
+    app: frontend
+
+  # Domains that are allowed (explicit allow)
+  allowList:
+  - '*.example.com'
+  - 'api.trusted-service.io'
+  - '*.googleapis.com'
+
+  # Domains that are blocked (explicit deny)
+  blockList:
+  - '*.malicious-site.com'
+  - 'tracking.ads.net'
+  - 'www.google.com'
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+### Applying a Policy
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+Apply the sample policy provided in the repository:
 
-```sh
-kubectl apply -k config/samples/
+```bash
+kubectl apply -f ../sample-policy.yaml
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+Or create your own:
 
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: dns.dnspolicies.io/v1alpha1
+kind: DnsPolicy
+metadata:
+  name: my-dns-policy
+  namespace: default
+spec:
+  targetSelector:
+    app: myapp
+  allowList:
+  - '*.mycompany.com'
+  - 'external-api.service.io'
+  blockList:
+  - '*.ads.com'
+  - 'telemetry.tracking.net'
+EOF
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+### Target Selector
 
-```sh
-make uninstall
+The `targetSelector` field uses label selectors to determine which pods should have the policy applied:
+
+```yaml
+spec:
+  targetSelector:
+    app: frontend
+    tier: web
 ```
 
-**UnDeploy the controller from the cluster:**
+Only pods with matching labels will receive the DNS sidecar injection and policy enforcement.
 
-```sh
-make undeploy
+### Allow and Block Lists
+
+- **allowList**: Domains explicitly permitted. Supports wildcards (`*.example.com`)
+- **blockList**: Domains explicitly denied. Takes precedence over allowList
+
+Both lists support:
+- Exact domain matches: `api.example.com`
+- Wildcard matches: `*.example.com`
+
+## Configuration
+
+### Helm Values
+
+Customize the deployment by modifying `values.yaml` or providing override values:
+
+```yaml
+image:
+  repository: docker.io/emirozbir/dns-mesh-controller
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+service:
+  type: ClusterIP
+  port: 8443
+  apiPort: 5959
 ```
 
-## Project Distribution
+## How It Works
 
-Following the options to release and provide this solution to the users.
+1. **Pod Creation**: When a pod is created with labels matching a DnsPolicy's targetSelector
+2. **Webhook Intercepts**: The mutating webhook intercepts the pod creation request
+3. **Sidecar Injection**: The webhook modifies the pod spec to include the DNS sidecar container
+4. **Policy Enforcement**: The sidecar proxies DNS queries and enforces the allow/block rules
+5. **DNS Resolution**: Allowed queries are forwarded; blocked queries are rejected
 
-### By providing a bundle with all YAML files
+## Common Use Cases
 
-1. Build the installer for the image built and published in the registry:
+### Restrict External Dependencies
 
-```sh
-make build-installer IMG=<some-registry>/dns-mesh-controller:tag
+Prevent pods from accessing unnecessary external services:
+
+```yaml
+spec:
+  targetSelector:
+    app: backend
+  allowList:
+  - '*.internal.company.com'
+  - 'database.service.local'
+  blockList:
+  - '*'  # Block all other domains
 ```
 
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
+### Block Tracking and Ads
 
-2. Using the installer
+Prevent telemetry and tracking for compliance:
 
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/dns-mesh-controller/<tag or branch>/dist/install.yaml
+```yaml
+spec:
+  targetSelector:
+    environment: production
+  blockList:
+  - '*.tracking.com'
+  - '*.analytics.io'
+  - 'telemetry.*'
 ```
 
-### By providing a Helm Chart
+### Security Isolation
 
-1. Build the chart using the optional helm plugin
+Limit DNS resolution for sensitive workloads:
 
-```sh
-operator-sdk edit --plugins=helm/v1-alpha
+```yaml
+spec:
+  targetSelector:
+    security: high
+  allowList:
+  - 'approved-service.com'
+  - '*.trusted-partner.io'
 ```
 
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
+## Troubleshooting
 
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
+### Check Controller Logs
 
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+```bash
+kubectl logs -n dns-mesh-controller-system -l control-plane=controller-manager
+```
 
-**NOTE:** Run `make help` for more information on all potential `make` targets
+### Verify Webhook Configuration
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+```bash
+kubectl get mutatingwebhookconfigurations
+```
+
+### Check Policy Status
+
+```bash
+kubectl get dnspolicies -A
+kubectl describe dnspolicy <policy-name> -n <namespace>
+```
+
+### Verify Sidecar Injection
+
+Check if the sidecar was injected into your pod:
+
+```bash
+kubectl get pod <pod-name> -o jsonpath='{.spec.containers[*].name}'
+```
+
+## Uninstallation
+
+To remove the DNS Mesh Controller:
+
+```bash
+# Delete all DnsPolicy resources first
+kubectl delete dnspolicies --all -A
+
+# Uninstall the Helm release
+helm uninstall dns-mesh-controller -n dns-mesh-controller-system
+
+# Delete the namespace
+kubectl delete namespace dns-mesh-controller-system
+```
+
+## Next Steps
+
+- Review the [sample-policy.yaml](deploy/sample-policy.yaml) for more examples
+- Customize DNS policies for your specific workloads
+- Monitor DNS query patterns and adjust policies accordingly
+- Integrate with monitoring systems for DNS policy violations
 
 ## License
 
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+Copyright 2025. Licensed under the Apache License, Version 2.0.
