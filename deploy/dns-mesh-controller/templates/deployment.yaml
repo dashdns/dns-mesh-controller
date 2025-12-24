@@ -32,8 +32,8 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: emirozbir/dns-mesh-controller:latest
-        imagePullPolicy: Always
+        image: {{.Values.image.repository}}:{{.Values.image.tag}}
+        imagePullPolicy: {{.Values.image.pullPolicy}}
         {{- with .Values.resources }}
         resources:
           {{- toYaml . | nindent 12 }}
