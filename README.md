@@ -222,6 +222,10 @@ spec:
   - '*.trusted-partner.io'
 ```
 
+To verify the blocking works fine log messages of sidecar-dns should be like this;
+
+<img src="./img/logs.png"></img>
+
 ## Troubleshooting
 
 ### Check Controller Logs
