@@ -1,4 +1,4 @@
-# DNS Mesh Controller
+# DNS Mesh Controller :frog:
 
 ## Overview
 
@@ -17,7 +17,16 @@ The DNS Mesh Controller automatically injects a sidecar DNS container into your 
 
 The controller consists of three main components:
 
+Here is the design details
+
+<img src="./img/architecture.png"></img>
+
 1. **Mutating Webhook**: Automatically injects the DNS sidecar container into targeted pods
+
+Mutating webhook project is located in another github repository <a href="https://github.com/WoodProgrammer/dns-mesh-sidecar-injector">dns-mesh-sidecar-injector</a>
+
+You have to install it according to the `README.md` on itself then you guys can start to inject sidecar-dns pods on your deployment objects. (Please check the `README.md` file on that project)
+
 2. **Controller Manager**: Watches DnsPolicy CRDs and reconciles the desired state
 3. **DNS Sidecar**: Proxy injected into pods that enforces DNS policies
 
