@@ -110,7 +110,6 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	fmt.Println("The selector has is ", selectorHash)
 	// Compute spec hash
 	specHash, err := ComputeSpecHash(&policy.Spec)
 	if err != nil {
