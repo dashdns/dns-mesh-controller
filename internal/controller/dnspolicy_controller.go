@@ -112,7 +112,6 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		} else {
 			hashObject = policy.Spec.Subject
-			fmt.Println("The hashobject is ", hashObject)
 		}
 	} else {
 		hashObject = policy.Spec.TargetSelector
