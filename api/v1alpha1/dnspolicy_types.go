@@ -41,6 +41,8 @@ type DnsPolicySpec struct {
 	Subject map[string]string `json:"subject,omitempty"`
 	// +optional
 	DryRun bool `json:"dryrun,omitempty"`
+	// +optional
+	Interval int `json:"interval,omitempty"`
 }
 
 // DnsPolicyStatus defines the observed state of DnsPolicy.
