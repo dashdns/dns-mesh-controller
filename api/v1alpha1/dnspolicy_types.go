@@ -27,8 +27,8 @@ import (
 type DnsPolicySpec struct {
 	// TargetSelector specifies the labels to match pods this policy applies to.
 	// Simple key-value matching: all labels must match exactly.
-	// +kubebuilder:validation:Required
-	TargetSelector map[string]string `json:"targetSelector"`
+	// +optional
+	TargetSelector map[string]string `json:"targetSelector,omitempty"`
 
 	// AllowList contains domain patterns that are allowed for DNS resolution.
 	// +optional
@@ -37,6 +37,10 @@ type DnsPolicySpec struct {
 	// BlockList contains domain patterns that are blocked from DNS resolution.
 	// +optional
 	BlockList []string `json:"blockList,omitempty"`
+
+	Subject map[string]string `json:"subject,omitempty"`
+	// +optional
+	DryRun bool `json:"dryrun,omitempty"`
 }
 
 // DnsPolicyStatus defines the observed state of DnsPolicy.

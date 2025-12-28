@@ -95,15 +95,32 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Validate targetSelector is not empty
-	if len(policy.Spec.TargetSelector) == 0 {
-		err := fmt.Errorf("targetSelector cannot be empty")
+	if len(policy.Spec.TargetSelector) == 0 && len(policy.Spec.Subject) == 0 {
+		err := fmt.Errorf("TargetSelector or Subject cannot be empty")
 		log.Error(err, "Invalid DnsPolicy spec")
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
 		return ctrl.Result{}, err
 	}
 
+	var hashObject map[string]string
+	// Validate targetSelector is not empty
+	if len(policy.Spec.TargetSelector) == 0 {
+		if len(policy.Spec.Subject) == 0 {
+			err := fmt.Errorf("targetSelector or Subject cannot be empty")
+			log.Error(err, "Invalid DnsPolicy spec")
+			r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
+			return ctrl.Result{}, err
+		} else {
+			hashObject = policy.Spec.Subject
+		}
+	} else {
+		hashObject = policy.Spec.TargetSelector
+	}
 	// Compute selector hash
-	selectorHash, err := ComputeSelectorHash(policy.Spec.TargetSelector)
+	selectorHash, err := ComputeSelectorHash(hashObject)
+
+	// Compute selector hash
+	//selectorHash, err := ComputeSelectorHash(policy.Spec.TargetSelector)
 	if err != nil {
 		log.Error(err, "Failed to compute selector hash")
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
