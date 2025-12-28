@@ -51,6 +51,12 @@ spec:
                 items:
                   type: string
                 type: array
+              dryrun:
+                type: boolean
+              subject:
+                additionalProperties:
+                  type: string
+                type: object
               targetSelector:
                 additionalProperties:
                   type: string
@@ -58,8 +64,6 @@ spec:
                   TargetSelector specifies the labels to match pods this policy applies to.
                   Simple key-value matching: all labels must match exactly.
                 type: object
-            required:
-            - targetSelector
             type: object
           status:
             description: DnsPolicyStatus defines the observed state of DnsPolicy.
