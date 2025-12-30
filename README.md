@@ -80,13 +80,6 @@ spec:
   # Pods to apply this policy to
   targetSelector:
     app: frontend
-
-  # Domains that are allowed (explicit allow)
-  allowList:
-  - '*.example.com'
-  - 'api.trusted-service.io'
-  - '*.googleapis.com'
-
   # Domains that are blocked (explicit deny)
   blockList:
   - '*.malicious-site.com'
@@ -114,9 +107,6 @@ metadata:
 spec:
   targetSelector:
     app: myapp
-  allowList:
-  - '*.mycompany.com'
-  - 'external-api.service.io'
   blockList:
   - '*.ads.com'
   - 'telemetry.tracking.net'
@@ -174,8 +164,6 @@ spec:
   dryrun: true
   subject:
     serviceAccount: my-app
-  allowList:
-  - '*.example.com'
   blockList:
   - '*.ads.com'
 ```
@@ -188,8 +176,7 @@ kubectl logs <pod-name> -c dns-sidecar
 
 ### Allow and Block Lists
 
-- **allowList**: Domains explicitly permitted. Supports wildcards (`*.example.com`)
-- **blockList**: Domains explicitly denied. Takes precedence over allowList
+- **blockList**: Domains explicitly denied.
 
 Both lists support:
 - Exact domain matches: `api.example.com`
@@ -239,9 +226,6 @@ Prevent pods from accessing unnecessary external services:
 spec:
   targetSelector:
     app: backend
-  allowList:
-  - '*.internal.company.com'
-  - 'database.service.local'
   blockList:
   - '*'  # Block all other domains
 ```
@@ -268,9 +252,6 @@ Limit DNS resolution for sensitive workloads:
 spec:
   targetSelector:
     security: high
-  allowList:
-  - 'approved-service.com'
-  - '*.trusted-partner.io'
 ```
 
 ### Identity-Based Policy with Dryrun
@@ -287,10 +268,6 @@ spec:
   dryrun: true
   subject:
     serviceAccount: payment-processor
-  allowList:
-  - '*.payment-gateway.com'
-  - 'bank-api.trusted.io'
-  - '*.internal.company.com'
   blockList:
   - '*'  # Block all others (in dryrun, only logs)
 ```

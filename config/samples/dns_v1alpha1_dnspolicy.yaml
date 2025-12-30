@@ -10,12 +10,6 @@ spec:
   # The controller will compute a hash of these labels for efficient lookups
   targetSelector:
     app: frontend
-  # AllowList defines domain patterns that are allowed
-  allowList:
-    - "*.example.com"
-    - "api.trusted-service.io"
-    - "*.googleapis.com"
-
   # BlockList defines domain patterns that are blocked
   blockList:
     - "*.malicious-site.com"

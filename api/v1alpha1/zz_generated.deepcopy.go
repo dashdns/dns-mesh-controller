@@ -94,11 +94,6 @@ func (in *DnsPolicySpec) DeepCopyInto(out *DnsPolicySpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.AllowList != nil {
-		in, out := &in.AllowList, &out.AllowList
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.BlockList != nil {
 		in, out := &in.BlockList, &out.BlockList
 		*out = make([]string, len(*in))

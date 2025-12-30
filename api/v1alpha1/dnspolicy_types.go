@@ -29,11 +29,6 @@ type DnsPolicySpec struct {
 	// Simple key-value matching: all labels must match exactly.
 	// +optional
 	TargetSelector map[string]string `json:"targetSelector,omitempty"`
-
-	// AllowList contains domain patterns that are allowed for DNS resolution.
-	// +optional
-	AllowList []string `json:"allowList,omitempty"`
-
 	// BlockList contains domain patterns that are blocked from DNS resolution.
 	// +optional
 	BlockList []string `json:"blockList,omitempty"`

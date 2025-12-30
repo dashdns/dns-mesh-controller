@@ -62,17 +62,10 @@ func ComputeSpecHash(spec *dnspolicyv1alpha1.DnsPolicySpec) (string, error) {
 	// Create a normalized representation
 	normalized := struct {
 		TargetSelector map[string]string
-		AllowList      []string
 		BlockList      []string
 	}{
 		TargetSelector: spec.TargetSelector,
-		AllowList:      spec.AllowList,
 		BlockList:      spec.BlockList,
-	}
-
-	// Sort slices for deterministic output
-	if normalized.AllowList != nil {
-		sort.Strings(normalized.AllowList)
 	}
 	if normalized.BlockList != nil {
 		sort.Strings(normalized.BlockList)
