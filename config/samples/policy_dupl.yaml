@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: dns-mesh-controller
     app.kubernetes.io/managed-by: kustomize
-  name: dnspolicy-sample
+  name: dnspolicy-duply
 spec:
   # TargetSelector defines which pods this policy applies to
   # The controller will compute a hash of these labels for efficient lookups

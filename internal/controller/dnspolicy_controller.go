@@ -18,11 +18,14 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,13 +41,15 @@ const (
 // DnsPolicyReconciler reconciles a DnsPolicy object
 type DnsPolicyReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Index  *PolicyIndex
+	Scheme   *runtime.Scheme
+	Index    *PolicyIndex
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=dns.dnspolicies.io,resources=dnspolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=dns.dnspolicies.io,resources=dnspolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=dns.dnspolicies.io,resources=dnspolicies/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile reconciles a DnsPolicy object by:
 // 1. Computing hashes of the targetSelector and full spec
@@ -73,11 +78,13 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// Remove from index before removing finalizer
 			log.Info("DnsPolicy being deleted, removing from index", "name", req.NamespacedName)
 			r.Index.Delete(req.NamespacedName)
+			r.Recorder.Event(&policy, corev1.EventTypeNormal, "Deleted", "DnsPolicy removed from index")
 
 			// Remove finalizer
 			controllerutil.RemoveFinalizer(&policy, dnsPolicyFinalizer)
 			if err := r.Update(ctx, &policy); err != nil {
 				log.Error(err, "Failed to remove finalizer")
+				r.Recorder.Event(&policy, corev1.EventTypeWarning, "FinalizerRemovalFailed", fmt.Sprintf("Failed to remove finalizer: %v", err))
 				return ctrl.Result{}, err
 			}
 		}
@@ -89,8 +96,10 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		controllerutil.AddFinalizer(&policy, dnsPolicyFinalizer)
 		if err := r.Update(ctx, &policy); err != nil {
 			log.Error(err, "Failed to add finalizer")
+			r.Recorder.Event(&policy, corev1.EventTypeWarning, "FinalizerAddFailed", fmt.Sprintf("Failed to add finalizer: %v", err))
 			return ctrl.Result{}, err
 		}
+		r.Recorder.Event(&policy, corev1.EventTypeNormal, "FinalizerAdded", "Finalizer added to DnsPolicy")
 		return ctrl.Result{}, nil
 	}
 
@@ -98,6 +107,7 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if len(policy.Spec.TargetSelector) == 0 && len(policy.Spec.Subject) == 0 {
 		err := fmt.Errorf("TargetSelector or Subject cannot be empty")
 		log.Error(err, "Invalid DnsPolicy spec")
+		r.Recorder.Event(&policy, corev1.EventTypeWarning, "InvalidSpec", "TargetSelector or Subject cannot be empty")
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
 		return ctrl.Result{}, err
 	}
@@ -108,6 +118,7 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if len(policy.Spec.Subject) == 0 {
 			err := fmt.Errorf("targetSelector or Subject cannot be empty")
 			log.Error(err, "Invalid DnsPolicy spec")
+			r.Recorder.Event(&policy, corev1.EventTypeWarning, "InvalidSpec", "TargetSelector or Subject cannot be empty")
 			r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
 			return ctrl.Result{}, err
 		} else {
@@ -118,19 +129,29 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	// Compute selector hash
 	selectorHash, err := ComputeSelectorHash(hashObject)
-
-	// Compute selector hash
-	//selectorHash, err := ComputeSelectorHash(policy.Spec.TargetSelector)
 	if err != nil {
 		log.Error(err, "Failed to compute selector hash")
+		r.Recorder.Event(&policy, corev1.EventTypeWarning, "HashComputationFailed", fmt.Sprintf("Failed to compute selector hash: %v", err))
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
 		return ctrl.Result{}, err
 	}
 
+	existing_index := r.Index.Get(selectorHash)
+
+	if existing_index != nil {
+		if len(existing_index.Name) != 0 && existing_index.Name != policy.Name {
+			err := errors.New("DUPLICATE HASH ERROR")
+			log.Error(err, fmt.Sprintf("The policy contains same hash policy with the name %s", existing_index.Name))
+			r.Recorder.Event(&policy, corev1.EventTypeWarning, "DuplicatHash", fmt.Sprintf("Failed to compute spec hash: %v", err))
+			r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
+			return ctrl.Result{}, err
+		}
+	}
 	// Compute spec hash
 	specHash, err := ComputeSpecHash(&policy.Spec)
 	if err != nil {
 		log.Error(err, "Failed to compute spec hash")
+		r.Recorder.Event(&policy, corev1.EventTypeWarning, "HashComputationFailed", fmt.Sprintf("Failed to compute spec hash: %v", err))
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
 		return ctrl.Result{}, err
 	}
@@ -141,11 +162,13 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info("Selector hash changed", "old", policy.Status.SelectorHash, "new", selectorHash)
 		policy.Status.SelectorHash = selectorHash
 		needsStatusUpdate = true
+		r.Recorder.Eventf(&policy, corev1.EventTypeNormal, "SelectorHashUpdated", "Selector hash updated to %s", selectorHash)
 	}
 	if policy.Status.SpecHash != specHash {
 		log.Info("Spec hash changed", "old", policy.Status.SpecHash, "new", specHash)
 		policy.Status.SpecHash = specHash
 		needsStatusUpdate = true
+		r.Recorder.Eventf(&policy, corev1.EventTypeNormal, "SpecHashUpdated", "Spec hash updated to %s", specHash)
 	}
 	if policy.Status.ObservedGeneration != policy.Generation {
 		policy.Status.ObservedGeneration = policy.Generation
@@ -155,14 +178,17 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Update index with the policy
 	r.Index.Upsert(&policy, selectorHash)
 	log.Info("DnsPolicy indexed", "name", req.NamespacedName, "selectorHash", selectorHash, "specHash", specHash)
+	r.Recorder.Event(&policy, corev1.EventTypeNormal, "PolicyIndexed", "DnsPolicy successfully indexed and ready")
 
 	// Update status if needed
 	if needsStatusUpdate {
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionTrue, "Reconciled", "DnsPolicy successfully reconciled")
 		if err := r.Status().Update(ctx, &policy); err != nil {
 			log.Error(err, "Failed to update status")
+			r.Recorder.Event(&policy, corev1.EventTypeWarning, "StatusUpdateFailed", fmt.Sprintf("Failed to update status: %v", err))
 			return ctrl.Result{}, err
 		}
+		r.Recorder.Event(&policy, corev1.EventTypeNormal, "Reconciled", "DnsPolicy successfully reconciled")
 	}
 
 	return ctrl.Result{}, nil
@@ -199,6 +225,9 @@ func (r *DnsPolicyReconciler) updateCondition(ctx context.Context, policy *dnsv1
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DnsPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Initialize the event recorder
+	r.Recorder = mgr.GetEventRecorderFor("dnspolicy-controller")
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dnsv1alpha1.DnsPolicy{}).
 		Named("dnspolicy").
