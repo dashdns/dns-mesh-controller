@@ -62,6 +62,8 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var apiAddr string
+	var kubeDnsNamespace string
+	var kubeDnsSecretName string
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
@@ -69,6 +71,8 @@ func main() {
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&apiAddr, "api-bind-address", ":5959", "The address the DNS policy API endpoint binds to.")
+	flag.StringVar(&kubeDnsNamespace, "kube-dns-namespace", "kube-system", "The namespace where kube-dns TLS secrets are stored.")
+	flag.StringVar(&kubeDnsSecretName, "kube-dns-secret-name", "kube-dns-tls", "The name of the kube-dns TLS secret.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -219,12 +223,12 @@ func main() {
 	}
 
 	// Create and add API server to manager
-	apiServer := controller.NewAPIServer(policyIndex, apiAddr)
+	apiServer := controller.NewAPIServer(policyIndex, apiAddr, mgr.GetClient(), kubeDnsNamespace, kubeDnsSecretName)
 	if err := mgr.Add(apiServer); err != nil {
 		setupLog.Error(err, "unable to add API server to manager")
 		os.Exit(1)
 	}
-	setupLog.Info("Added API server to manager", "address", apiAddr)
+	setupLog.Info("Added API server to manager", "address", apiAddr, "kube-dns-namespace", kubeDnsNamespace, "kube-dns-secret", kubeDnsSecretName)
 
 	// +kubebuilder:scaffold:builder
 
