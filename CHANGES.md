@@ -24,6 +24,7 @@
 
   The /api/policies?hash=<selectorHash> endpoint now returns:
 
+
   {
     "policy": {
       "metadata": { ... },

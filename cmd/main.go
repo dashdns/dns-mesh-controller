@@ -72,7 +72,7 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&apiAddr, "api-bind-address", ":5959", "The address the DNS policy API endpoint binds to.")
 	flag.StringVar(&kubeDnsNamespace, "kube-dns-namespace", "kube-system", "The namespace where kube-dns TLS secrets are stored.")
-	flag.StringVar(&kubeDnsSecretName, "kube-dns-secret-name", "kube-dns-tls", "The name of the kube-dns TLS secret.")
+	flag.StringVar(&kubeDnsSecretName, "kube-dns-secret-name", "coredns-tls-bundle", "The name of the kube-dns TLS secret.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
