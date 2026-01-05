@@ -30,6 +30,8 @@ spec:
         - --metrics-bind-address=:{{.Values.service.port}}
         - --leader-elect
         - --health-probe-bind-address=:8081
+        - --kube-dns-namespace={{.Values.kubeDns.namespace}}
+        - --kube-dns-secret-name={{.Values.kubeDns.secretName}}
         command:
         - /manager
         image: {{.Values.image.repository}}:{{.Values.image.tag}}

@@ -19,6 +19,10 @@ service:
   port: 8443
   apiPort: 5959
 
+kubeDns:
+  namespace: kube-system
+  secretName: kube-dns-tls
+
 resources:
   limits:
     cpu: 500m
