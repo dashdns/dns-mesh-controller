@@ -39,20 +39,22 @@ spec:
           spec:
             description: DnsPolicySpec defines the desired state of DnsPolicy.
             properties:
-              allowList:
-                description: AllowList contains domain patterns that are allowed for
-                  DNS resolution.
-                items:
-                  type: string
-                type: array
               blockList:
                 description: BlockList contains domain patterns that are blocked from
                   DNS resolution.
                 items:
                   type: string
                 type: array
+              doh:
+                type: boolean
+              dohTlsSecrets:
+                additionalProperties:
+                  type: string
+                type: object
+              dryrun:
+                type: boolean
               subject:
-                additionalPropertiees:
+                additionalProperties:
                   type: string
                 type: object
               targetSelector:

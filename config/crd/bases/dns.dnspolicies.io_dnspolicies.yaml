@@ -45,6 +45,12 @@ spec:
                 items:
                   type: string
                 type: array
+              doh:
+                type: boolean
+              dohTlsSecrets:
+                additionalProperties:
+                  type: string
+                type: object
               dryrun:
                 type: boolean
               subject:

@@ -23,19 +23,41 @@ import (
 	"net/http"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // APIServer serves DNS policies to clients via HTTP.
 type APIServer struct {
-	Index  *PolicyIndex
-	Server *http.Server
+	Index             *PolicyIndex
+	Server            *http.Server
+	Client            client.Client
+	KubeDnsNamespace  string
+	KubeDnsSecretName string
+}
+
+// PolicyResponse represents the API response containing policy and TLS data.
+type PolicyResponse struct {
+	Policy  interface{}    `json:"policy"`
+	TLSData *TLSSecretData `json:"tlsData,omitempty"`
+}
+
+// TLSSecretData contains the TLS certificate and key data.
+type TLSSecretData struct {
+	Certificate   []byte `json:"certificate,omitempty"`
+	PrivateKey    []byte `json:"privateKey,omitempty"`
+	CACertificate []byte `json:"caCertificate,omitempty"`
 }
 
 // NewAPIServer creates a new API server instance.
-func NewAPIServer(index *PolicyIndex, addr string) *APIServer {
+func NewAPIServer(index *PolicyIndex, addr string, client client.Client, kubeDnsNamespace, kubeDnsSecretName string) *APIServer {
 	apiServer := &APIServer{
-		Index: index,
+		Index:             index,
+		Client:            client,
+		KubeDnsNamespace:  kubeDnsNamespace,
+		KubeDnsSecretName: kubeDnsSecretName,
 	}
 
 	mux := http.NewServeMux()
@@ -81,6 +103,28 @@ func (s *APIServer) Start(ctx context.Context) error {
 	return nil
 }
 
+// fetchTLSSecret fetches the TLS secret from Kubernetes.
+func (s *APIServer) fetchTLSSecret(ctx context.Context) (*TLSSecretData, error) {
+	secret := &corev1.Secret{}
+	namespacedName := types.NamespacedName{
+		Namespace: s.KubeDnsNamespace,
+		Name:      s.KubeDnsSecretName,
+	}
+
+	if err := s.Client.Get(ctx, namespacedName, secret); err != nil {
+		return nil, fmt.Errorf("failed to fetch TLS secret: %w", err)
+	}
+
+	// Extract certificate, private key, and CA certificate from secret data
+	tlsData := &TLSSecretData{
+		Certificate:   secret.Data["tls.crt"],
+		PrivateKey:    secret.Data["tls.key"],
+		CACertificate: secret.Data["ca.crt"],
+	}
+
+	return tlsData, nil
+}
+
 // handleGetPolicy handles GET /api/policies?hash=<selectorHash>
 func (s *APIServer) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -102,11 +146,27 @@ func (s *APIServer) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return policy as JSON
+	// Fetch TLS secret data
+	ctx := r.Context()
+	tlsData, err := s.fetchTLSSecret(ctx)
+	if err != nil {
+		// Log error but continue without TLS data
+		log := ctrl.LoggerFrom(ctx).WithName("api-server")
+		log.Error(err, "Failed to fetch TLS secret, returning policy without TLS data")
+		tlsData = nil
+	}
+
+	// Create response with policy and TLS data
+	response := PolicyResponse{
+		Policy:  policy,
+		TLSData: tlsData,
+	}
+
+	// Return response as JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(policy); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
 		return
 	}
