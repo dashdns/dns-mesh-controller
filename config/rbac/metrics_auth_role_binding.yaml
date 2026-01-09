@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: metrics-auth-rolebinding
+  name: dns-mesh-controller-metrics-auth-role-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: metrics-auth-role
+  name: dns-mesh-controller-metrics-auth-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager

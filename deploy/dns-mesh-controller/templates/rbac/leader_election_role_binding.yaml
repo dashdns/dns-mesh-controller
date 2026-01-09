@@ -4,13 +4,13 @@ metadata:
   labels:
     app.kubernetes.io/name: dns-mesh-controller
     app.kubernetes.io/managed-by: kustomize
-  name: leader-election-rolebinding
+  name: dnspolicy-leader-election-rolebinding
   namespace: {{.Release.Namespace}}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: leader-election-role
+  name: dnspolicy-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: controller-manager
+  name: dns-mesh-controller-controller-manager
   namespace: {{.Release.Namespace}}

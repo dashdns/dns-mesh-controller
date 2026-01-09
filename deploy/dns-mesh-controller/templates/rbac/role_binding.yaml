@@ -4,11 +4,11 @@ metadata:
   labels:
     app.kubernetes.io/name: dns-mesh-controller
     app.kubernetes.io/managed-by: kustomize
-  name: manager-rolebinding
+  name: dns-mesh-controller-manager-role-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: dns-mesh-controller-manager-role
 subjects:
 - kind: ServiceAccount
   name: dns-mesh-controller-controller-manager
