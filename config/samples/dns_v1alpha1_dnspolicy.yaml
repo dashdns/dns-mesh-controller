@@ -12,5 +12,6 @@ spec:
     app: frontend
   # BlockList defines domain patterns that are blocked
   blockList:
-    - "*.malicious-site.com"
-    - "tracking.ads.net"
+    - "www.google.com"
+  doh: true
+  dryrun: true
