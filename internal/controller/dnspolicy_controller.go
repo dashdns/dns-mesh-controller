@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -41,9 +40,10 @@ const (
 // DnsPolicyReconciler reconciles a DnsPolicy object
 type DnsPolicyReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Index    *PolicyIndex
-	Recorder record.EventRecorder
+	Scheme         *runtime.Scheme
+	Index          *PolicyIndex
+	BlocklistCache *BlocklistCache
+	Recorder       record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=dns.dnspolicies.io,resources=dnspolicies,verbs=get;list;watch;create;update;patch;delete
@@ -52,10 +52,10 @@ type DnsPolicyReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile reconciles a DnsPolicy object by:
-// 1. Computing hashes of the targetSelector and full spec
-// 2. Updating the status with computed hashes
-// 3. Indexing the policy for efficient client lookups by hash
-// 4. Handling deletions by removing from index
+// 1. Validating the policy spec
+// 2. Indexing the policy for blocklist matching
+// 3. Triggering blocklist recalculation for affected pods
+// 4. Handling deletions by removing from index and updating blocklist
 func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -65,7 +65,13 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if apierrors.IsNotFound(err) {
 			// Policy was deleted - remove from index
 			log.Info("DnsPolicy deleted, removing from index", "name", req.NamespacedName)
-			r.Index.Delete(req.NamespacedName)
+			oldSelector := r.Index.Delete(req.NamespacedName)
+
+			// Recalculate blocklist for pods that matched this policy
+			if oldSelector != nil && len(oldSelector) > 0 {
+				r.BlocklistCache.RecalculateForPolicy(oldSelector)
+			}
+
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get DnsPolicy")
@@ -75,10 +81,18 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Handle deletion with finalizer
 	if !policy.ObjectMeta.DeletionTimestamp.IsZero() {
 		if controllerutil.ContainsFinalizer(&policy, dnsPolicyFinalizer) {
+			// Get the selector before removing from index
+			oldSelector := policy.Spec.TargetSelector
+
 			// Remove from index before removing finalizer
 			log.Info("DnsPolicy being deleted, removing from index", "name", req.NamespacedName)
 			r.Index.Delete(req.NamespacedName)
 			r.Recorder.Event(&policy, corev1.EventTypeNormal, "Deleted", "DnsPolicy removed from index")
+
+			// Recalculate blocklist for affected pods
+			if len(oldSelector) > 0 {
+				r.BlocklistCache.RecalculateForPolicy(oldSelector)
+			}
 
 			// Remove finalizer
 			controllerutil.RemoveFinalizer(&policy, dnsPolicyFinalizer)
@@ -104,83 +118,35 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Validate targetSelector is not empty
-	if len(policy.Spec.TargetSelector) == 0 && len(policy.Spec.Subject) == 0 {
-		err := fmt.Errorf("TargetSelector or Subject cannot be empty")
+	if len(policy.Spec.TargetSelector) == 0 {
+		err := fmt.Errorf("targetSelector cannot be empty")
 		log.Error(err, "Invalid DnsPolicy spec")
-		r.Recorder.Event(&policy, corev1.EventTypeWarning, "InvalidSpec", "TargetSelector or Subject cannot be empty")
+		r.Recorder.Event(&policy, corev1.EventTypeWarning, "InvalidSpec", "TargetSelector cannot be empty")
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	var hashObject map[string]string
-	// Validate targetSelector is not empty
-	if len(policy.Spec.TargetSelector) == 0 {
-		if len(policy.Spec.Subject) == 0 {
-			err := fmt.Errorf("targetSelector or Subject cannot be empty")
-			log.Error(err, "Invalid DnsPolicy spec")
-			r.Recorder.Event(&policy, corev1.EventTypeWarning, "InvalidSpec", "TargetSelector or Subject cannot be empty")
-			r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "InvalidSpec", err.Error())
-			return ctrl.Result{}, err
-		} else {
-			hashObject = policy.Spec.Subject
-		}
+	// Update index with the policy and get old selector
+	oldSelector := r.Index.Upsert(&policy)
+	log.Info("DnsPolicy indexed", "name", req.NamespacedName, "selector", policy.Spec.TargetSelector)
+	r.Recorder.Event(&policy, corev1.EventTypeNormal, "PolicyIndexed", "DnsPolicy successfully indexed")
+
+	// Recalculate blocklist for affected pods
+	if oldSelector != nil && !selectorsEqual(oldSelector, policy.Spec.TargetSelector) {
+		// Selector changed - recalculate pods matching both old and new selectors
+		r.BlocklistCache.RecalculateForPolicyChange(oldSelector, policy.Spec.TargetSelector)
 	} else {
-		hashObject = policy.Spec.TargetSelector
-	}
-	// Compute selector hash
-	selectorHash, err := ComputeSelectorHash(hashObject)
-	if err != nil {
-		log.Error(err, "Failed to compute selector hash")
-		r.Recorder.Event(&policy, corev1.EventTypeWarning, "HashComputationFailed", fmt.Sprintf("Failed to compute selector hash: %v", err))
-		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
-		return ctrl.Result{}, err
+		// New policy or same selector - recalculate pods matching current selector
+		r.BlocklistCache.RecalculateForPolicy(policy.Spec.TargetSelector)
 	}
 
-	existing_index := r.Index.Get(selectorHash)
-
-	if existing_index != nil {
-		if len(existing_index.Name) != 0 && existing_index.Name != policy.Name {
-			err := errors.New("DUPLICATE HASH ERROR")
-			log.Error(err, fmt.Sprintf("The policy contains same hash policy with the name %s", existing_index.Name))
-			r.Recorder.Event(&policy, corev1.EventTypeWarning, "DuplicatHash", fmt.Sprintf("Failed to compute spec hash: %v", err))
-			r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
-			return ctrl.Result{}, err
-		}
-	}
-	// Compute spec hash
-	specHash, err := ComputeSpecHash(&policy.Spec)
-	if err != nil {
-		log.Error(err, "Failed to compute spec hash")
-		r.Recorder.Event(&policy, corev1.EventTypeWarning, "HashComputationFailed", fmt.Sprintf("Failed to compute spec hash: %v", err))
-		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionFalse, "HashComputationFailed", err.Error())
-		return ctrl.Result{}, err
-	}
-
-	// Update status if hashes have changed
+	// Update status
 	needsStatusUpdate := false
-	if policy.Status.SelectorHash != selectorHash {
-		log.Info("Selector hash changed", "old", policy.Status.SelectorHash, "new", selectorHash)
-		policy.Status.SelectorHash = selectorHash
-		needsStatusUpdate = true
-		r.Recorder.Eventf(&policy, corev1.EventTypeNormal, "SelectorHashUpdated", "Selector hash updated to %s", selectorHash)
-	}
-	if policy.Status.SpecHash != specHash {
-		log.Info("Spec hash changed", "old", policy.Status.SpecHash, "new", specHash)
-		policy.Status.SpecHash = specHash
-		needsStatusUpdate = true
-		r.Recorder.Eventf(&policy, corev1.EventTypeNormal, "SpecHashUpdated", "Spec hash updated to %s", specHash)
-	}
 	if policy.Status.ObservedGeneration != policy.Generation {
 		policy.Status.ObservedGeneration = policy.Generation
 		needsStatusUpdate = true
 	}
 
-	// Update index with the policy
-	r.Index.Upsert(&policy, selectorHash)
-	log.Info("DnsPolicy indexed", "name", req.NamespacedName, "selectorHash", selectorHash, "specHash", specHash)
-	r.Recorder.Event(&policy, corev1.EventTypeNormal, "PolicyIndexed", "DnsPolicy successfully indexed and ready")
-
-	// Update status if needed
 	if needsStatusUpdate {
 		r.updateCondition(ctx, &policy, "Ready", metav1.ConditionTrue, "Reconciled", "DnsPolicy successfully reconciled")
 		if err := r.Status().Update(ctx, &policy); err != nil {
@@ -192,6 +158,19 @@ func (r *DnsPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// selectorsEqual checks if two selectors are equal.
+func selectorsEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+		}
+	}
+	return true
 }
 
 // updateCondition updates a condition in the policy status
