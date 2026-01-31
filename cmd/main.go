@@ -62,8 +62,6 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var apiAddr string
-	var kubeDnsNamespace string
-	var kubeDnsSecretName string
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
@@ -71,8 +69,6 @@ func main() {
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&apiAddr, "api-bind-address", ":5959", "The address the DNS policy API endpoint binds to.")
-	flag.StringVar(&kubeDnsNamespace, "kube-dns-namespace", "kube-system", "The namespace where kube-dns TLS secrets are stored.")
-	flag.StringVar(&kubeDnsSecretName, "kube-dns-secret-name", "coredns-tls-bundle", "The name of the kube-dns TLS secret.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -208,27 +204,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create policy index for efficient hash-based lookups
+	// Create indexes for pods and policies
+	podIndex := controller.NewPodIndex()
 	policyIndex := controller.NewPolicyIndex()
-	setupLog.Info("Created policy index")
+	setupLog.Info("Created pod and policy indexes")
 
-	// Setup DnsPolicy controller with index
+	// Create blocklist cache that references both indexes
+	blocklistCache := controller.NewBlocklistCache(podIndex, policyIndex)
+	setupLog.Info("Created blocklist cache")
+
+	// Setup DnsPolicy controller with index and blocklist cache
 	if err := (&controller.DnsPolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Index:  policyIndex,
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Index:          policyIndex,
+		BlocklistCache: blocklistCache,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DnsPolicy")
 		os.Exit(1)
 	}
 
+	// Setup Pod controller to watch pods and update blocklist
+	if err := (&controller.PodReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		PodIndex:       podIndex,
+		BlocklistCache: blocklistCache,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		os.Exit(1)
+	}
+
 	// Create and add API server to manager
-	apiServer := controller.NewAPIServer(policyIndex, apiAddr, mgr.GetClient(), kubeDnsNamespace, kubeDnsSecretName)
+	apiServer := controller.NewAPIServer(blocklistCache, apiAddr, mgr.GetClient())
 	if err := mgr.Add(apiServer); err != nil {
 		setupLog.Error(err, "unable to add API server to manager")
 		os.Exit(1)
 	}
-	setupLog.Info("Added API server to manager", "address", apiAddr, "kube-dns-namespace", kubeDnsNamespace, "kube-dns-secret", kubeDnsSecretName)
+	setupLog.Info("Added API server to manager", "address", apiAddr)
 
 	// +kubebuilder:scaffold:builder
 

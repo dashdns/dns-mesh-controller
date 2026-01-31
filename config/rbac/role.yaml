@@ -12,6 +12,14 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - dns.dnspolicies.io
   resources:
   - dnspolicies

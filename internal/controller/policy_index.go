@@ -23,31 +23,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// PolicyIndex maintains an in-memory index of DNS policies by their selector hash.
-// This allows efficient O(1) lookups for clients querying by hash.
+// PolicyIndex maintains an in-memory index of DNS policies.
+// Policies are stored by their namespaced name for efficient lookup and iteration.
 type PolicyIndex struct {
 	mu sync.RWMutex
 
-	// hashToPolicy maps selector hash to the policy
-	// Single policy per hash as per requirements
-	hashToPolicy map[string]*dnspolicyv1alpha1.DnsPolicy
-
-	// nameToHash maps policy namespaced name to its selector hash
-	// Used for reverse lookups during updates/deletes
-	nameToHash map[types.NamespacedName]string
+	// policies maps namespaced policy name to the policy
+	policies map[types.NamespacedName]*dnspolicyv1alpha1.DnsPolicy
 }
 
 // NewPolicyIndex creates a new empty policy index.
 func NewPolicyIndex() *PolicyIndex {
 	return &PolicyIndex{
-		hashToPolicy: make(map[string]*dnspolicyv1alpha1.DnsPolicy),
-		nameToHash:   make(map[types.NamespacedName]string),
+		policies: make(map[types.NamespacedName]*dnspolicyv1alpha1.DnsPolicy),
 	}
 }
 
 // Upsert adds or updates a policy in the index.
-// If the selector hash changed, it removes the old entry and adds the new one.
-func (pi *PolicyIndex) Upsert(policy *dnspolicyv1alpha1.DnsPolicy, selectorHash string) {
+// Returns the old targetSelector if the policy existed and selector changed, nil otherwise.
+func (pi *PolicyIndex) Upsert(policy *dnspolicyv1alpha1.DnsPolicy) map[string]string {
 	pi.mu.Lock()
 	defer pi.mu.Unlock()
 
@@ -56,37 +50,40 @@ func (pi *PolicyIndex) Upsert(policy *dnspolicyv1alpha1.DnsPolicy, selectorHash 
 		Name:      policy.Name,
 	}
 
-	// Check if this policy was previously indexed with a different hash
-	if oldHash, exists := pi.nameToHash[namespacedName]; exists && oldHash != selectorHash {
-		// Remove old hash entry
-		delete(pi.hashToPolicy, oldHash)
+	var oldSelector map[string]string
+
+	// Check if policy exists and get old selector
+	if existing, exists := pi.policies[namespacedName]; exists {
+		oldSelector = existing.Spec.TargetSelector
 	}
 
-	// Add/update the policy
-	pi.hashToPolicy[selectorHash] = policy.DeepCopy()
-	pi.nameToHash[namespacedName] = selectorHash
+	// Store a deep copy of the policy
+	pi.policies[namespacedName] = policy.DeepCopy()
+
+	return oldSelector
 }
 
 // Delete removes a policy from the index.
-func (pi *PolicyIndex) Delete(namespacedName types.NamespacedName) {
+// Returns the policy's targetSelector if it existed, nil otherwise.
+func (pi *PolicyIndex) Delete(namespacedName types.NamespacedName) map[string]string {
 	pi.mu.Lock()
 	defer pi.mu.Unlock()
 
-	// Find the hash for this policy
-	if hash, exists := pi.nameToHash[namespacedName]; exists {
-		// Remove from both maps
-		delete(pi.hashToPolicy, hash)
-		delete(pi.nameToHash, namespacedName)
+	if existing, exists := pi.policies[namespacedName]; exists {
+		selector := existing.Spec.TargetSelector
+		delete(pi.policies, namespacedName)
+		return selector
 	}
+	return nil
 }
 
-// Get retrieves a policy by its selector hash.
-// Returns nil if no policy matches the hash.
-func (pi *PolicyIndex) Get(selectorHash string) *dnspolicyv1alpha1.DnsPolicy {
+// Get retrieves a policy by its namespaced name.
+// Returns nil if no policy matches.
+func (pi *PolicyIndex) Get(namespacedName types.NamespacedName) *dnspolicyv1alpha1.DnsPolicy {
 	pi.mu.RLock()
 	defer pi.mu.RUnlock()
 
-	if policy, exists := pi.hashToPolicy[selectorHash]; exists {
+	if policy, exists := pi.policies[namespacedName]; exists {
 		return policy.DeepCopy()
 	}
 	return nil
@@ -97,8 +94,8 @@ func (pi *PolicyIndex) GetAll() []*dnspolicyv1alpha1.DnsPolicy {
 	pi.mu.RLock()
 	defer pi.mu.RUnlock()
 
-	policies := make([]*dnspolicyv1alpha1.DnsPolicy, 0, len(pi.hashToPolicy))
-	for _, policy := range pi.hashToPolicy {
+	policies := make([]*dnspolicyv1alpha1.DnsPolicy, 0, len(pi.policies))
+	for _, policy := range pi.policies {
 		policies = append(policies, policy.DeepCopy())
 	}
 	return policies
@@ -108,5 +105,5 @@ func (pi *PolicyIndex) GetAll() []*dnspolicyv1alpha1.DnsPolicy {
 func (pi *PolicyIndex) Size() int {
 	pi.mu.RLock()
 	defer pi.mu.RUnlock()
-	return len(pi.hashToPolicy)
+	return len(pi.policies)
 }
