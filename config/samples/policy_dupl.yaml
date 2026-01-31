@@ -13,5 +13,7 @@ spec:
     app: frontend
   # BlockList defines domain patterns that are blocked
   blockList:
+    - www.google.com
+    - ifconfig.co
     - "*.malicious-site.com"
     - "tracking.ads.net"
