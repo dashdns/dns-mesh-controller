@@ -20,10 +20,9 @@ import (
 )
 
 var (
-	runtimeScheme    = runtime.NewScheme()
-	codecs           = serializer.NewCodecFactory(runtimeScheme)
-	deserializer     = codecs.UniversalDeserializer()
-	operationalModes = []string{"balance", "strict", "flexible"}
+	runtimeScheme = runtime.NewScheme()
+	codecs        = serializer.NewCodecFactory(runtimeScheme)
+	deserializer  = codecs.UniversalDeserializer()
 )
 
 func NewServer() *Server {
