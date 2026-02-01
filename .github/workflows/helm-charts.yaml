@@ -7,7 +7,7 @@ on:
 env:
   OCI_REGISTRY: oci://registry-1.docker.io
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
-  CHART_DIR: deploy/dns-mesh-controller
+  CHART_DIR: charts/dns-mesh-controller
   CHART_REPO: dash-dns-stack
 
 jobs:
