@@ -30,7 +30,7 @@ jobs:
 
       - name: Docker Hub login (Helm OCI)
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | helm registry login registry-1.docker.io \
+          helm registry login registry-1.docker.io \
             --username "${{ secrets.DOCKERHUB_USERNAME }}" \
             --password "${{secrets.DOCKERHUB_TOKEN}}"
 
@@ -65,7 +65,7 @@ jobs:
           HELM_EXPERIMENTAL_OCI: "1"
         run: |
           CHART_TGZ="$(ls dist/*.tgz | head -n1)"
-          helm push "$CHART_TGZ" "${{ env.OCI_REGISTRY }}/${{ env.DOCKERHUB_NAMESPACE }}/${{ env.CHART_REPO }}"
+          helm push "$CHART_TGZ" "${{ env.OCI_REGISTRY }}/${{ env.DOCKERHUB_NAMESPACE }}"
 
       - name: (Optional) Push chart on main as edge
         if: github.ref == 'refs/heads/main'
