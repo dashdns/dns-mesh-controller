@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "*"
+    branches:
+      - fix-directory-structure
 
 jobs:
   build-and-push-dnsd:
