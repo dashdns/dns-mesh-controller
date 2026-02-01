@@ -1,22 +1,29 @@
 webhook:
-  image: docker.io/emirozbir/dashdns-webhook
+  image: emirozbir/dashdns-admission-webhook:fix-directory-structure
+  replicas: 1
   pullPolicy: Always
   tag: "latest"
   dns_service:
-    name: dashdns-svc
-    namespace: "dashdns"
+    name: dnsd-dashdns
+    namespace: "default"
   certChain:
     ca: ""
     cert: ""
     key: ""
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
 
 controller:
   replicaCount: 1
-
   image:
-    repository: docker.io/emirozbir/dns-mesh-controller
+    repository: docker.io/emirozbir/dashdns-controller
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "fix-directory-structure"
 
   imagePullSecrets: []
   nameOverride: ""

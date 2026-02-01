@@ -4,6 +4,8 @@ metadata:
   name: frontend-deployment
   labels:
     app: frontend
+  annotations:
+    dasdns.io/watch: "true"
 spec:
   replicas: 3
   selector:
@@ -16,6 +18,6 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: nginx:1.14.2
+        image: nginx:latest
         ports:
         - containerPort: 80

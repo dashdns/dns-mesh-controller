@@ -5,7 +5,7 @@ metadata:
   labels:
     app: dashdns-webhook
 spec:
-  replicas: 1
+  replicas: {{.Values.webhook.replicas}}
   selector:
     matchLabels:
       app: dashdns-webhook
@@ -46,13 +46,10 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 5
+        {{- with .Values.controller.resources }}
         resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 100m
-            memory: 64Mi
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
       volumes:
       - name: webhook-certs
         secret:
