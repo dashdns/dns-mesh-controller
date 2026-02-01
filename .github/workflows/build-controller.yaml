@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Docker image
         id: build_img
-        working_directory: controller
+        working-directory: controller
         run: |
           #!/bin/bash
           export IMG=${IMAGE_TO_BUILD}
