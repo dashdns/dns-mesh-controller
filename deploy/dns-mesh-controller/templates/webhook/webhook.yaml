@@ -1,0 +1,21 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: dashdns-webhook
+webhooks:
+- name: dashdns-webhook.{{.Release.Namespace}}.svc
+  clientConfig:
+    service:
+      name: dashdns-webhook
+      namespace: default
+      path: "/mutate"
+    caBundle: {{.Values.webhook.certChain.ca}}
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["deployments"]
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  timeoutSeconds: 10
+  failurePolicy: Ignore

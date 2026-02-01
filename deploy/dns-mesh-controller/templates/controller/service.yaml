@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: "{{.Release.Name}}-service"
+  namespace: {{.Release.Namespace}}
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: https
+    port: {{.Values.controller.service.port}}
+    protocol: TCP
+    targetPort: {{.Values.controller.service.port}}
+  - name: http
+    port: {{.Values.controller.service.apiPort}}
+    protocol: TCP
+    targetPort: {{.Values.controller.service.apiPort}}
+  selector:
+    control-plane: controller-manager
+  sessionAffinity: None
+  type: ClusterIP

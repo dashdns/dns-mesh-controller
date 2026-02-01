@@ -1,4 +1,0 @@
-## Append samples of your project ##
-resources:
-- dns_v1alpha1_dnspolicy.yaml
-# +kubebuilder:scaffold:manifestskustomizesamples
