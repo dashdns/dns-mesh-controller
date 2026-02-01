@@ -36,4 +36,4 @@ jobs:
           export IMG=${IMAGE_TO_BUILD}
           make docker-buildx
         env:
-          IMAGE_TO_BUILD: "${{ secrets.DOCKERHUB_USERNAME }}/dashdns-admission-webhookg:${{ env.TAG }}"
+          IMAGE_TO_BUILD: "${{ secrets.DOCKERHUB_USERNAME }}/dashdns-admission-webhook:${{ env.TAG }}"
