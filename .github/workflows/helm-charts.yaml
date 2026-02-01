@@ -3,7 +3,6 @@ name: Publish Helm chart to Docker Hub (OCI)
 on:
   push:
     tags: ["v*"]
-    branches: ["main"]
 
 env:
   OCI_REGISTRY: oci://registry-1.docker.io
