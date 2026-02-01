@@ -7,6 +7,12 @@
 *.so
 *.dylib
 
+**bin
+**/bin
+**./bin
+**./controller/bin
+**./webhook/bin
+
 # Test binary, built with `go test -c`
 *.test
 

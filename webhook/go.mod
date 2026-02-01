@@ -1,9 +1,8 @@
-module github.com/emirozbir/sidecar-injector
+module github.com/dashdns/webhook
 
 go 1.25.0
 
 require (
-	github.com/google/martian/v3 v3.3.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
 	k8s.io/client-go v0.35.0

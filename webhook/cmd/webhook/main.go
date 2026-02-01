@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/emirozbir/sidecar-injector/pkg/webhook"
+	"github.com/dashdns/webhook/pkg/webhook"
 )
 
 var (

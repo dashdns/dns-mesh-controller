@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: frontend-deployment
   annotations:
-    sidecar-injector.io/inject: "true"
+    dasdns.io/watch: "true"
   labels:
     app: frontend
 spec:
