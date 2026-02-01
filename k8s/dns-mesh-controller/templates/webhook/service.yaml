@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashdns-webhook
+  labels:
+    app: dashdns-webhook
+spec:
+  ports:
+  - port: 443
+    targetPort: 8443
+    protocol: TCP
+    name: https
+  selector:
+    app: dashdns-webhook
+  type: ClusterIP

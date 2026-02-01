@@ -27,16 +27,14 @@ spec:
     spec:
       containers:
       - args:
-        - --metrics-bind-address=:{{.Values.service.port}}
+        - --metrics-bind-address=:{{.Values.controller.service.port}}
         - --leader-elect
         - --health-probe-bind-address=:8081
-        - --kube-dns-namespace={{.Values.kubeDns.namespace}}
-        - --kube-dns-secret-name={{.Values.kubeDns.secretName}}
         command:
         - /manager
-        image: {{.Values.image.repository}}:{{.Values.image.tag}}
-        imagePullPolicy: {{.Values.image.pullPolicy}}
-        {{- with .Values.resources }}
+        image: {{.Values.controller.image.repository}}:{{.Values.controller.image.tag}}
+        imagePullPolicy: {{.Values.controller.image.pullPolicy}}
+        {{- with .Values.controller.resources }}
         resources:
           {{- toYaml . | nindent 12 }}
         {{- end }}
@@ -52,7 +50,7 @@ spec:
           timeoutSeconds: 1
         name: manager
         ports:
-        - containerPort: {{.Values.service.apiPort}}
+        - containerPort: {{.Values.controller.service.apiPort}}
           protocol: TCP
         readinessProbe:
           failureThreshold: 3
@@ -80,15 +78,15 @@ spec:
           type: RuntimeDefault
       serviceAccount: dns-mesh-controller-controller-manager
       serviceAccountName: dns-mesh-controller-controller-manager
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.controller.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.controller.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.controller.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

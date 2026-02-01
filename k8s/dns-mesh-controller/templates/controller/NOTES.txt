@@ -1,0 +1,4 @@
+1. This is the dns-mesh-controller
+
+* The apiservice is running on {{.Values.controller.service.apiPort}}
+* The controller is running on {{.Values.controller.service.port}}

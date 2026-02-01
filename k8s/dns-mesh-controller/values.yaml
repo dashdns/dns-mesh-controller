@@ -1,38 +1,51 @@
-replicaCount: 1
-
-image:
-  repository: docker.io/emirozbir/dns-mesh-controller
-  pullPolicy: IfNotPresent
+webhook:
+  image: docker.io/emirozbir/dashdns-webhook
+  pullPolicy: Always
   tag: "latest"
+  dns_service:
+    name: dashdns-svc
+    namespace: "dashdns"
+  certChain:
+    ca: ""
+    cert: ""
+    key: ""
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-podAnnotations: {}
-podLabels: {}
+controller:
+  replicaCount: 1
 
-podSecurityContext: {}
+  image:
+    repository: docker.io/emirozbir/dns-mesh-controller
+    pullPolicy: IfNotPresent
+    tag: "latest"
 
-securityContext: {}
-service:
-  type: ClusterIP
-  port: 8443
-  apiPort: 5959
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+  podAnnotations: {}
+  podLabels: {}
 
-kubeDns:
-  namespace: kube-system
-  secretName: kube-dns-tls
+  podSecurityContext: {}
 
-resources:
-  limits:
-    cpu: 500m
-    memory: 128Mi
-  requests:
-    cpu: 10m
-    memory: 64Mi
+  securityContext: {}
+  service:
+    type: ClusterIP
+    port: 8443
+    apiPort: 5959
 
-nodeSelector: {}
+  kubeDns:
+    namespace: kube-system
+    secretName: kube-dns-tls
 
-tolerations: []
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
 
-affinity: {}
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}

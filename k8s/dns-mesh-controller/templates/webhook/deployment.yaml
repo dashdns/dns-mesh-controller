@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashdns-webhook
+  labels:
+    app: dashdns-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashdns-webhook
+  template:
+    metadata:
+      labels:
+        app: dashdns-webhook
+    spec:
+      serviceAccountName: dashdns-webhook
+      containers:
+      - name: webhook
+        image: {{.Values.webhook.image}}
+        env:
+        - name: DNS_SERVICE_NAME
+          value: "{{.Values.webhook.dns_service.name}}"
+        - name: DNS_SERVICE_NAMESPACE
+          value: "{{.Values.webhook.dns_service.namespace}}"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/webhook/certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: dashdns-webhook-certs

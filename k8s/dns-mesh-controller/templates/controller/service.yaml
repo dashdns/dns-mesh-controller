@@ -12,13 +12,13 @@ spec:
   ipFamilyPolicy: SingleStack
   ports:
   - name: https
-    port: {{.Values.service.port}}
+    port: {{.Values.controller.service.port}}
     protocol: TCP
-    targetPort: {{.Values.service.port}}
+    targetPort: {{.Values.controller.service.port}}
   - name: http
-    port: {{.Values.service.apiPort}}
+    port: {{.Values.controller.service.apiPort}}
     protocol: TCP
-    targetPort: {{.Values.service.apiPort}}
+    targetPort: {{.Values.controller.service.apiPort}}
   selector:
     control-plane: controller-manager
   sessionAffinity: None
