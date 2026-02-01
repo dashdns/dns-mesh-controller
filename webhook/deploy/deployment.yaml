@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidecar-injector-webhook
+  namespace: default
+  labels:
+    app: sidecar-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidecar-injector
+  template:
+    metadata:
+      labels:
+        app: sidecar-injector
+    spec:
+      serviceAccountName: sidecar-injector
+      containers:
+      - name: webhook
+        image: docker.io/emirozbir/sidecar-injector:latest
+        env:
+        - name: SIDECAR_IMAGE
+          value: "docker.io/emirozbir/sidecar-dns"
+        - name: SIDECAR_IMAGE_TAG
+          value: "latest"
+        - name: "CONTROLLER_ADDRESS"
+          value: "http://dns-mesh-controller-service.dns-mesh-controller-system:5959"
+        - name: "DNS_MESH_OPERATIONAL_MODE"
+          value: "balanced"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/webhook/certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: sidecar-injector-certs

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: got-kutay
+  annotations:
+    sidecar-injector.io/inject: "true"
+  labels:
+    app: got-kutay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: got-kutay
+  template:
+    metadata:
+      labels:
+        app: got-kutay
+    spec:
+      serviceAccountName: osman
+      containers:
+      - name: main
+        image: nginx:latest
+        ports:
+        - containerPort: 80
