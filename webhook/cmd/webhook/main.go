@@ -29,7 +29,7 @@ func init() {
 }
 
 func main() {
-	log.Println("Starting sidecar injector webhook server...")
+	log.Println("Starting dns config injector webhook server...")
 
 	// Create webhook server
 	webhookServer := webhook.NewServer()

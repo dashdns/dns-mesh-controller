@@ -1,20 +1,20 @@
 # DNS Mesh Controller
 
-A Kubernetes-native DNS policy management system that provides fine-grained DNS control for your workloads through automatic sidecar injection.
+A Kubernetes-native DNS policy management system that provides fine-grained DNS control for your workloads through EBPF based dns mesh system.
 
 ## Overview
 
 DNS Mesh Controller enables you to control which DNS queries are allowed or blocked at the pod level using Custom Resource Definitions (CRDs). The system consists of two main components:
 
 - **Controller**: Kubernetes operator that watches DnsPolicy CRDs and reconciles the desired state
-- **Webhook**: Mutating admission webhook that automatically injects DNS sidecar containers into targeted pods
+- **Webhook**: Mutating admission webhook that automatically adjust DNS configuration of deployments and route them to the `dnsd` daemonsets.
 
 ## Project Structure
 
 ```
 .
 ├── controller/     # DNS Mesh Controller operator
-├── webhook/        # Sidecar injector webhook
+├── webhook/        # DNS Config injector webhook
 └── deploy/         # Helm chart for deployment
 ```
 
@@ -25,7 +25,7 @@ Each component has its own detailed documentation:
 | Component | Description | Documentation |
 |-----------|-------------|---------------|
 | Controller | Kubernetes operator for DNS policy management | [controller/README.md](controller/README.md) |
-| Webhook | Mutating webhook for sidecar injection | [webhook/README.md](webhook/README.md) |
+| Webhook | Mutating webhook for dns config injection | [webhook/README.md](webhook/README.md) |
 
 ## Installation
 

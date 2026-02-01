@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	sidecarAnnotation = "dasdns.io/watch"
+	dashDnsAnnotation = "dasdns.io/watch"
 )
 
 func shouldAdjustDnsConfig(deployment *appsv1.Deployment) bool {
@@ -18,7 +18,7 @@ func shouldAdjustDnsConfig(deployment *appsv1.Deployment) bool {
 		return false
 	}
 
-	value, exists := annotations[sidecarAnnotation]
+	value, exists := annotations[dashDnsAnnotation]
 	return exists && value == "true"
 }
 

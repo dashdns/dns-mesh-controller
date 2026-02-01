@@ -3,9 +3,9 @@
 set -e
 
 # Variables
-SERVICE_NAME="sidecar-injector-webhook"
-NAMESPACE="default"
-SECRET_NAME="sidecar-injector-certs"
+SERVICE_NAME="dashdns-webhook"
+NAMESPACE=${1:-default}
+SECRET_NAME="dashdns-webhook-certs"
 
 # Create temp directory for certificates
 TMP_DIR=$(mktemp -d)
