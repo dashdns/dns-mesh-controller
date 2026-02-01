@@ -1,4 +1,4 @@
-name: controller-build
+name: webhook-build
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - fix-directory-structure
 
 jobs:
-  build-and-push-dnsd:
+  build-and-push-webhook:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,4 +36,4 @@ jobs:
           export IMG=${IMAGE_TO_BUILD}
           make docker-buildx
         env:
-          IMAGE_TO_BUILD: "${{ secrets.DOCKERHUB_USERNAME }}/dashdns-admission-webhook:${{ env.TAG }}"
+          IMAGE_TO_BUILD: "${{ secrets.DOCKERHUB_USERNAME }}/dashdns-admission-webhookg:${{ env.TAG }}"
