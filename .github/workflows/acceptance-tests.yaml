@@ -2,6 +2,8 @@ name: dns-mesh-controller-acceptance-tests
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "*"
 
@@ -22,7 +24,6 @@ jobs:
 
       - name: Setup Test Suite & Apply
         id: build_img
-        working-directory: controller
         run: |
           #!/bin/bash
           ./setup-test-suite.sh $IMAGE_TO_BUILD
