@@ -6,7 +6,7 @@ revisionHistoryLimit: 3
 
 image:
   repository: emirozbir/dnsd
-  tag: "v1.0.0-rc"
+  tag: "v2.0.0-rc"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
