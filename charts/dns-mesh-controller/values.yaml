@@ -22,7 +22,7 @@ webhook:
 controller:
   replicaCount: 1
   image:
-    repository: docker.io/emirozbir/dashdns-controller
+    repository: emirozbir/dashdns-controller
     pullPolicy: IfNotPresent
     tag: "fix-directory-structure"
 

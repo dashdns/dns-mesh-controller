@@ -358,10 +358,10 @@ main() {
     trap cleanup EXIT
 
     # Run test pipeline
-    #check_prerequisites
-    #install_kind
-    #create_cluster
-    #load_images "${image_tag}"
+    check_prerequisites
+    install_kind
+    create_cluster
+    load_images "${image_tag}"
     deploy_stack "${image_tag}"
     wait_for_workloads
     run_test_scenario
