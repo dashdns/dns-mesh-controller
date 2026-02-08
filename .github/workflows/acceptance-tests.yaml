@@ -2,8 +2,6 @@ name: dns-mesh-controller-acceptance-tests
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "*"
 
