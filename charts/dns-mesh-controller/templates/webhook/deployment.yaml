@@ -17,7 +17,7 @@ spec:
       serviceAccountName: dashdns-webhook
       containers:
       - name: webhook
-        image: {{.Values.webhook.image}}
+        image: "{{.Values.webhook.image.repository}}:{{.Values.webhook.image.tag}}"
         env:
         - name: DNS_SERVICE_NAME
           value: "{{.Values.webhook.dns_service.name}}"

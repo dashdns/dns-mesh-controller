@@ -1,8 +1,9 @@
 webhook:
-  image: emirozbir/dashdns-admission-webhook:fix-directory-structure
+  image:
+    repository: emirozbir/dashdns-admission-webhook
+    tag: fix-directory-structure
+    pullPolicy: Always
   replicas: 1
-  pullPolicy: Always
-  tag: "latest"
   dns_service:
     name: dnsd-dashdns
     namespace: "default"
@@ -38,10 +39,6 @@ controller:
     type: ClusterIP
     port: 8443
     apiPort: 5959
-
-  kubeDns:
-    namespace: kube-system
-    secretName: kube-dns-tls
 
   resources:
     limits:

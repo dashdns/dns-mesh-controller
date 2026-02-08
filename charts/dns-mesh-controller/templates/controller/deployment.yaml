@@ -32,7 +32,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: {{.Values.controller.image.repository}}:{{.Values.controller.image.tag}}
+        image: "{{.Values.controller.image.repository}}:{{.Values.controller.image.tag}}"
         imagePullPolicy: {{.Values.controller.image.pullPolicy}}
         {{- with .Values.controller.resources }}
         resources:
