@@ -1,0 +1,27 @@
+name: dns-mesh-controller-acceptance-tests
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  build-and-push-dnsd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        id: build_img
+        working-directory: controller
+        run: |
+          #!/bin/bash
+          export IMG=${IMAGE_TO_BUILD}
+          make docker-buildx
+        env:
+          IMAGE_TO_BUILD: "${{ secrets.DOCKERHUB_USERNAME }}/dashdns-controller:${{ env.TAG }}"

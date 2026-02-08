@@ -4,11 +4,8 @@ metadata:
   labels:
     app.kubernetes.io/name: dns-mesh-controller
     app.kubernetes.io/managed-by: kustomize
-  name: dnspolicy-duply
+  name: dnspolicy
 spec:
-  doh: false # DNS over HTTPS disabled for this policy
-  # TargetSelector defines which pods this policy applies to
-  # The controller will compute a hash of these labels for efficient lookups
   targetSelector:
     app: frontend
   # BlockList defines domain patterns that are blocked

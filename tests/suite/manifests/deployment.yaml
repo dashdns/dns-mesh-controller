@@ -7,7 +7,7 @@ metadata:
   annotations:
     dasdns.io/watch: "true"
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -19,5 +19,7 @@ spec:
       containers:
       - name: frontend
         image: nginx:latest
+        command: ["/bin/bash"]
+        args: ["-c", "apt update"]
         ports:
         - containerPort: 80
