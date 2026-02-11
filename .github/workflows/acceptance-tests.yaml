@@ -13,10 +13,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: actions/checkout@v4 
 
       - name: Extract Tag Name
         id: get_tag
@@ -26,6 +23,6 @@ jobs:
         id: build_img
         run: |
           #!/bin/bash
-          ./setup-test-suite.sh v2.0.0-rc
+          ./setup-test-suite.sh $IMAGE_TO_BUILD
         env:
           IMAGE_TO_BUILD: "${{ env.TAG }}"

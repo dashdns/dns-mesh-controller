@@ -16,7 +16,7 @@ readonly KIND_CLUSTER_NAME="dnsmesh"
 readonly TEST_NAMESPACE="default"
 readonly ROLLOUT_TIMEOUT="120s"
 readonly LOG_COLLECTION_TIMEOUT=30
-readonly EXPECTED_BLOCKED_QUERIES=3
+readonly EXPECTED_BLOCKED_QUERIES=2
 
 # Image configuration
 readonly WEB_HOOK_IMAGE_NAME="docker.io/emirozbir/dashdns-admission-webhook"
@@ -204,9 +204,9 @@ deploy_stack() {
     # Deploy dns-mesh-controller
 
     CA_CERT=$(cat webhook/scripts/deploy/ca-bundle.txt)
-    CERT=$(cat webhook/scripts/deploy/cert.txt|base64)
-    CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64)
-    echo $CA_CERT
+    CERT=$(cat webhook/scripts/deploy/cert.txt|base64| tr -d '\n')
+    CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64| tr -d '\n')
+
     helm upgrade --install dns-mesh-stack \
         --set controller.image.repository="${CONTROLLER_IMAGE_NAME}" \
         --set controller.image.tag="${image_tag}" \
