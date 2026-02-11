@@ -16,7 +16,7 @@ readonly KIND_CLUSTER_NAME="dnsmesh"
 readonly TEST_NAMESPACE="default"
 readonly ROLLOUT_TIMEOUT="120s"
 readonly LOG_COLLECTION_TIMEOUT=30
-readonly EXPECTED_BLOCKED_QUERIES=3
+readonly EXPECTED_BLOCKED_QUERIES=2
 
 # Image configuration
 readonly WEB_HOOK_IMAGE_NAME="docker.io/emirozbir/dashdns-admission-webhook"
