@@ -204,8 +204,8 @@ deploy_stack() {
     # Deploy dns-mesh-controller
 
     CA_CERT=$(cat webhook/scripts/deploy/ca-bundle.txt)
-    CERT=$(cat webhook/scripts/deploy/cert.txt|base64)
-    CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64)
+    CERT=$(cat webhook/scripts/deploy/cert.txt|base64| tr -d '\n')
+    CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64| tr -d '\n')
 
     echo $CERT_KEY
     echo $CERT
