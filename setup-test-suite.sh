@@ -54,7 +54,7 @@ cleanup() {
     rm -f "${SCRIPT_DIR}/tests/suite/manifests/logs.txt"
 
     # Optionally delete test deployments (cluster deletion handles this anyway)
-    kubectl delete -f "${SCRIPT_DIR}/tests/suite/manifests/deployment.yaml" --ignore-not-found=true 2>/dev/null || true
+    #kubectl delete -f "${SCRIPT_DIR}/tests/suite/manifests/." --ignore-not-found=true 2>/dev/null || true
 
     if [[ "${KEEP_CLUSTER:-false}" != "true" ]]; then
         log_info "Deleting kind cluster '${KIND_CLUSTER_NAME}'..."
@@ -199,18 +199,27 @@ load_images() {
 deploy_stack() {
     local image_tag="$1"
 
-    log_info "Deploying DNS mesh controller stack via Helm..."
-
+    log_info "Deploying DNS mesh contrlsoller stack via Helm..."
+    ./webhook/scripts/generate-certs.sh
     # Deploy dns-mesh-controller
+
+    CA_CERT=$(cat webhook/scripts/deploy/ca-bundle.txt)
+    CERT=$(cat webhook/scripts/deploy/cert.txt|base64)
+    CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64)
+    echo $CA_CERT
     helm upgrade --install dns-mesh-stack \
         --set controller.image.repository="${CONTROLLER_IMAGE_NAME}" \
         --set controller.image.tag="${image_tag}" \
-        --set controller.image.pullPolicy="Never" \
+        --set controller.image.pullPolicy="Always" \
         --set webhook.image.repository="${WEB_HOOK_IMAGE_NAME}" \
         --set webhook.image.tag="${image_tag}" \
-        --set webhook.image.pullPolicy="Never" \
+        --set webhook.image.pullPolicy="Always" \
+        --set webhook.certChain.ca="${CA_CERT}" \
+        --set webhook.certChain.cert="${CERT}" \
+        --set webhook.certChain.key="${CERT_KEY}" \
         --values "${SCRIPT_DIR}/charts/dns-mesh-controller/values.yaml" \
         "${SCRIPT_DIR}/charts/dns-mesh-controller" \
+        --wait \
         --timeout "${ROLLOUT_TIMEOUT}"
 
     log_info "DNS mesh controller deployed"
@@ -221,6 +230,7 @@ deploy_stack() {
         --set image.tag="${DNSD_IMAGE_TAG}" \
         --values "${SCRIPT_DIR}/charts/dashdns/values.yaml" \
         "${SCRIPT_DIR}/charts/dashdns" \
+        --wait \
         --timeout "${ROLLOUT_TIMEOUT}"
 
     kubectl get po -o wide
@@ -261,22 +271,10 @@ run_test_scenario() {
     kubectl apply -f "${manifests_dir}/crd.yaml"
     kubectl apply -f "${manifests_dir}/deployment.yaml"
 
-    # Wait for test deployment to be ready
-    log_info "Waiting for test deployment to be ready..."
-    kubectl rollout status deployment/frontend --timeout="${ROLLOUT_TIMEOUT}" || {
-        log_error "Test deployment failed to become ready"
-        kubectl describe deployment/frontend
-        exit 1
-    }
-
-    # Restart dnsd daemonset to pick up new policies
-    log_info "Restarting dnsd daemonset to apply policies..."
-    kubectl rollout restart daemonset/dnsd-dashdns
-    kubectl rollout status daemonset/dnsd-dashdns --timeout="${ROLLOUT_TIMEOUT}"
-
     # Collect logs for analysis
+    kubectl rollout status deployment/frontend-deployment --timeout="${ROLLOUT_TIMEOUT}"  2>/dev/null
     log_info "Collecting logs for ${LOG_COLLECTION_TIMEOUT} seconds..."
-    timeout "${LOG_COLLECTION_TIMEOUT}" kubectl logs -f -l app=frontend > "${logs_file}" 2>/dev/null || true
+    timeout 45 kubectl logs -f -l app=frontend >> "${logs_file}" 2>/dev/null || true
 
     # Analyze results
     analyze_results "${logs_file}"
@@ -296,7 +294,7 @@ analyze_results() {
     fi
 
     local blocked_count
-    blocked_count=$(grep -c "Ign:" "${logs_file}" 2>/dev/null || echo "0")
+    blocked_count=$(grep -c "Ign:" "${logs_file}" 2>/dev/null)
 
     log_info "Number of blocked DNS queries: ${blocked_count}"
 

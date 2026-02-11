@@ -1,4 +1,4 @@
-name: dns-mesh-controller-acceptance-tests
+name: dns-mesh-controller-functional-tests
 
 on:
   push:
@@ -26,6 +26,6 @@ jobs:
         id: build_img
         run: |
           #!/bin/bash
-          ./setup-test-suite.sh v2.0.0-rcg
+          ./setup-test-suite.sh v2.0.0-rc
         env:
           IMAGE_TO_BUILD: "${{ env.TAG }}"

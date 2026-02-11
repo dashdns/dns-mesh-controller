@@ -44,24 +44,15 @@ openssl x509 -req -in ${TMP_DIR}/tls.csr -CA ${TMP_DIR}/ca.crt -CAkey ${TMP_DIR}
 
 echo "Certificates generated successfully"
 
-# Create Kubernetes secret
-kubectl create secret generic ${SECRET_NAME} \
-  --from-file=tls.key=${TMP_DIR}/tls.key \
-  --from-file=tls.crt=${TMP_DIR}/tls.crt \
-  --namespace=${NAMESPACE} \
-  --dry-run=client -o yaml > deploy/secret.yaml
-
-echo "Secret manifest created at deploy/secret.yaml"
-
 # Export CA bundle for webhook configuration
 CA_BUNDLE=$(cat ${TMP_DIR}/ca.crt | base64 | tr -d '\n')
 echo "CA Bundle (use this in MutatingWebhookConfiguration):"
 echo ${CA_BUNDLE}
 
 # Save CA bundle to file
-echo ${CA_BUNDLE} > deploy/ca-bundle.txt
+echo ${CA_BUNDLE} > webhook/scripts/deploy/ca-bundle.txt
+cp ${TMP_DIR}/tls.crt webhook/scripts/deploy/cert.txt
+cp ${TMP_DIR}/tls.key webhook/scripts/deploy/key.txt
 
 # Cleanup
-rm -rf ${TMP_DIR}
-
-echo "Done! Apply the secret with: kubectl apply -f deploy/secret.yaml"
+#rm -rf ${TMP_DIR}

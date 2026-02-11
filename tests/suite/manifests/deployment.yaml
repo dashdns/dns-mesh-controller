@@ -19,7 +19,10 @@ spec:
       containers:
       - name: frontend
         image: nginx:latest
-        command: ["/bin/bash"]
-        args: ["-c", "apt update"]
-        ports:
-        - containerPort: 80
+        command:
+          - sh
+          - -c
+          - |
+            sleep 10
+            apt update && \
+            apt-get install -y dnsutils
