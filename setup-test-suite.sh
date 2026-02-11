@@ -211,7 +211,6 @@ deploy_stack() {
         --set webhook.image.pullPolicy="Never" \
         --values "${SCRIPT_DIR}/charts/dns-mesh-controller/values.yaml" \
         "${SCRIPT_DIR}/charts/dns-mesh-controller" \
-        --wait \
         --timeout "${ROLLOUT_TIMEOUT}"
 
     log_info "DNS mesh controller deployed"
@@ -222,9 +221,9 @@ deploy_stack() {
         --set image.tag="${DNSD_IMAGE_TAG}" \
         --values "${SCRIPT_DIR}/charts/dashdns/values.yaml" \
         "${SCRIPT_DIR}/charts/dashdns" \
-        --wait \
         --timeout "${ROLLOUT_TIMEOUT}"
 
+    kubectl get po -o wide
     log_info "DNSD deployed"
 }
 
@@ -361,7 +360,6 @@ main() {
     check_prerequisites
     install_kind
     create_cluster
-    #load_images "${image_tag}"
     deploy_stack "${image_tag}"
     wait_for_workloads
     run_test_scenario

@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "*"
+    branches:
+      - "main"
 
 jobs:
   test-entire-stack:
@@ -24,6 +26,6 @@ jobs:
         id: build_img
         run: |
           #!/bin/bash
-          ./setup-test-suite.sh $IMAGE_TO_BUILD
+          ./setup-test-suite.sh v2.0.0-rcg
         env:
           IMAGE_TO_BUILD: "${{ env.TAG }}"
