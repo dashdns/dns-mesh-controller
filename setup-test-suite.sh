@@ -207,8 +207,6 @@ deploy_stack() {
     CERT=$(cat webhook/scripts/deploy/cert.txt|base64| tr -d '\n')
     CERT_KEY=$(cat webhook/scripts/deploy/key.txt|base64| tr -d '\n')
 
-    echo $CERT_KEY
-    echo $CERT
     helm upgrade --install dns-mesh-stack \
         --set controller.image.repository="${CONTROLLER_IMAGE_NAME}" \
         --set controller.image.tag="${image_tag}" \
