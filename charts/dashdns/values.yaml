@@ -30,7 +30,7 @@ dns:
   # URL to fetch per-IP blocklist from (JSON format)
   ipBlocklistUrl: "http://dns-mesh-stack-service.default:5959/api/policies"
   # Interval to refresh the remote IP blocklist
-  ipBlocklistInterval: "5m"
+  ipBlocklistInterval: "5s"
 
 # Additional command arguments
 extraArgs: []

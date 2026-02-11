@@ -50,6 +50,7 @@ echo "CA Bundle (use this in MutatingWebhookConfiguration):"
 echo ${CA_BUNDLE}
 
 # Save CA bundle to file
+mkdir -p webhook/scripts/deploy
 echo ${CA_BUNDLE} > webhook/scripts/deploy/ca-bundle.txt
 cp ${TMP_DIR}/tls.crt webhook/scripts/deploy/cert.txt
 cp ${TMP_DIR}/tls.key webhook/scripts/deploy/key.txt
