@@ -72,7 +72,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	// Skip pods that are not Running
-	if pod.Status.Phase != corev1.PodRunning {
+	if pod.Status.Phase != corev1.PodRunning && len(pod.Status.PodIP) == 0 {
 		log.V(1).Info("Pod is not running, skipping", "name", req.NamespacedName, "phase", pod.Status.Phase)
 
 		// If the pod was previously indexed but is no longer running, remove it
