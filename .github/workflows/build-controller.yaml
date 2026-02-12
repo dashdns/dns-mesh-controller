@@ -68,7 +68,7 @@ jobs:
 
   test-entire-stack:
     runs-on: ubuntu-latest
-
+    needs: [build-and-push-controller, build-and-push-controller]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4 
