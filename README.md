@@ -31,8 +31,6 @@ DNS Mesh Controller is a Kubernetes operator that provides fine-grained DNS cont
 - **Kernel-Level Enforcement**: DNS filtering via eBPF without userspace overhead
 - **Zero-Touch Integration**: Automatic DNS injection via annotation
 - **Label & Identity Based Targeting**: Target pods by labels or ServiceAccount
-- **DNS over HTTPS (DoH)**: Encrypted DNS support
-- **Dryrun Mode**: Safe testing in production
 - **Dynamic Updates**: Policy updates without pod restarts
 
 ## Installation
@@ -98,12 +96,6 @@ spec:
     - "*.malicious-site.com"
     - "tracking.ads.net"
     - "telemetry.example.com"
-
-  # Enable DNS over HTTPS?
-  doh: true
-
-  # Test mode (log only, no blocking)
-  dryrun: false
 ```
 
 ### Example 1: Label-Based Policy
@@ -155,29 +147,6 @@ spec:
     serviceAccount: payment-processor
   blockList:
     - "*"  # Block all external DNS
-  doh: true
-```
-
-### Example 3: Testing with Dryrun Mode
-
-Test your policy in production without blocking, just logging:
-
-```yaml
-apiVersion: dns.dnspolicies.io/v1alpha1
-kind: DnsPolicy
-metadata:
-  name: test-policy
-spec:
-  dryrun: true  # Log only, no blocking
-  targetSelector:
-    environment: production
-  blockList:
-    - "*.suspicious-domain.com"
-```
-
-Check logs in dryrun mode:
-```bash
-kubectl logs -l app=dnsd-daemonset -n dns-mesh-system
 ```
 
 ### Controller API
@@ -393,7 +362,6 @@ spec:
     - "*.ads.com"
     - "*.tracking.io"
     - "malware.example.com"
-  doh: true
 EOF
 ```
 
