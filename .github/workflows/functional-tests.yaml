@@ -23,6 +23,6 @@ jobs:
         id: build_img
         run: |
           #!/bin/bash
-          ./setup-test-suite.sh v2.0.0-rc
+          ./setup-test-suite.sh $IMAGE_TO_BUILD
         env:
           IMAGE_TO_BUILD: "${{ env.TAG }}"
