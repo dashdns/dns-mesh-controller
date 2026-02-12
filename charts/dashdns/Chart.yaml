@@ -2,7 +2,7 @@ apiVersion: v2
 name: dashdns
 description: A Helm chart for DashDNS - eBPF-based DNS proxy with XDP/TC filtering
 type: application
-version: 0.1.0
+version: v2.0.2
 appVersion: "v1"
 keywords:
   - dns
