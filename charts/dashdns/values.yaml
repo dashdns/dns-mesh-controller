@@ -17,7 +17,7 @@ prometheus:
   metrics:
     port: 9090
     metrics: "TCP"
-  enabled: true
+  enabled: false
   serviceMonitorDiscoverLabels:
     release: prometheus-operator
 
