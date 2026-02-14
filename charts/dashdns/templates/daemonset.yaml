@@ -71,6 +71,9 @@ spec:
             - name: dns-udp
               containerPort: 53
               protocol: UDP
+            - name: dns-metrics
+              containerPort: 9090
+              protocol: TCP
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           {{- with .Values.resources }}

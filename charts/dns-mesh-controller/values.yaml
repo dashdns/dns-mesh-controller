@@ -1,7 +1,7 @@
 webhook:
   image:
     repository: emirozbir/dashdns-admission-webhook
-    tag: "v2.0.0-rc"
+    tag: "v2.0.3"
     pullPolicy: Always
   replicas: 1
   dns_service:
@@ -24,7 +24,7 @@ controller:
   image:
     repository: emirozbir/dashdns-controller
     pullPolicy: Always
-    tag: "v2.0.0-rc"
+    tag: "v2.0.3"
 
   imagePullSecrets: []
   nameOverride: ""

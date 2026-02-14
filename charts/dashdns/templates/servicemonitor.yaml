@@ -1,0 +1,38 @@
+{{if .Values.prometheus.enabled}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  {{- with .Values.prometheus.serviceMonitorDiscoverLabels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  name: dnsd-service-monitor
+spec:
+  endpoints:
+  - port: "dns-metrics"
+  jobLabel: jobLabel
+  namespaceSelector:
+    matchNames:
+    - {{.Release.Namespace}}
+  selector:
+    {{- include "dashdns.labels" . | nindent 4 }}
+{{- end}}
+
+---
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "dashdns.fullname" . }}-prometehus-metrics"
+  labels:
+    {{- include "dashdns.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "dashdns.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: dns-metrics
+      port: {{ .Values.prometheus.metrics.port }}
+      targetPort: dns-metrics
+      protocol: TCP
+{{- end }}

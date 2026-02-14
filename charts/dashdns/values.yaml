@@ -6,12 +6,20 @@ revisionHistoryLimit: 3
 
 image:
   repository: emirozbir/dnsd
-  tag: "v2.0.0-rc"
+  tag: "v2.0.3"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+prometheus:
+  metrics:
+    port: 9090
+    metrics: "TCP"
+  enabled: true
+  serviceMonitorDiscoverLabels:
+    release: prometheus-operator
 
 # DNS configuration
 dns:
