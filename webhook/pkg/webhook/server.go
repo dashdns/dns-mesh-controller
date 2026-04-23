@@ -3,6 +3,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -165,6 +166,16 @@ func (s *Server) mutate(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionR
 	}
 	log.Printf("Using DNS service IP: %s for deployment %s/%s", dnsServiceIP, deployment.Namespace, deployment.Name)
 	patchBytes := []byte{}
+	if deployment.Spec.Template.Spec.HostNetwork {
+		err := errors.New(HOST_NETWORK_NOT_ALLOWED)
+		log.Printf("Could not create patch because of HostNetwork is true: %v", err)
+		return &admissionv1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	}
+
 	if shouldAdjustDnsConfig(&deployment) {
 		patchBytes, err = createPatch(&deployment, dnsServiceIP)
 		if err != nil {
